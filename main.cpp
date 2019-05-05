@@ -15,12 +15,12 @@ int database[1000][2000];
 
 // This function initializes the training database
 void init() {
-    //open the database and initialize the ratings to 0
+    // open the database and initialize the ratings to 0
     freopen("u1_base.txt", "r", stdin);
     memset(database, 0, sizeof(database));
 
-    //Take input from the base file
-    //Input format is mentioned below
+    // Take input from the base file
+    // Input format is mentioned below
     // UserID | ItemID | Rating | Timestamp
     for (int i = 1; i <= BASE_MAXN; ++i) {
         int userId, itemId, rating, timeStamp;
@@ -111,7 +111,8 @@ void evaluate(map<int, double> &userMean, map<int, double> &userTendency, map<in
               map<int, double> &itemTendency) {
     freopen("u1_test.txt", "r", stdin);
 
-    double MAE = 0.0, RMSE = 0.0;
+    double MAE = 0.0, RMSE = 0.0, precision, recall, f1Measure;
+    int countOfRecommended = 0, countOfRelevant = 0, countOfIntersection = 0;
     int count = 0;
 
     for (int i = 1; i <= TEST_MAXN; ++i) {
@@ -135,22 +136,44 @@ void evaluate(map<int, double> &userMean, map<int, double> &userTendency, map<in
             double temp = BETA * (tendencyItem + userMean[userId]) + (1 - BETA) * (tendencyUser + itemMean[itemId]);
             predictedRating = min(max(itemMean[itemId], temp), userMean[userId]);
         } else {
-            predictedRating = userMean[userId] * BETA + (1 - BETA) *itemMean[itemId];
+            predictedRating = userMean[userId] * BETA + (1 - BETA) * itemMean[itemId];
+        }
+
+        if (predictedRating >= 3.0 and rating >= 3.0) {
+            countOfIntersection++;
+            countOfRelevant++;
+            countOfRecommended++;
+        } else if (predictedRating >= 3.0 and rating < 3.0) {
+            countOfRecommended++;
+        } else if (predictedRating < 3.0 and rating >= 3.0) {
+            countOfRelevant++;
         }
 
         MAE  += abs(rating - predictedRating);
         RMSE += (rating - predictedRating) * (rating - predictedRating);
         count++;
+
+        //cout << "Actual Rating: " << rating << " Predicted Rating: " << predictedRating << "\n";
     }
 
     MAE  /= count;
-    RMSE /= (count - 1);
+    RMSE /= count;
     RMSE = sqrt(RMSE);
 
-    cout << MAE << " " << RMSE << "\n";
+    precision = countOfIntersection / (double) countOfRecommended;
+    recall    = countOfIntersection / (double) countOfRelevant;
+    f1Measure = (2.0 * precision * recall) / (precision + recall);
+
+    cout << "MAE: " << MAE << "\n";
+    cout << "RMSE: " << RMSE << "\n";
+    cout << "Precision: " << precision << "\n";
+    cout << "Recall: " << recall << "\n";
+    cout << "F1-Measure: " << f1Measure << "\n";
 }
 
 int main() {
+
+    double startt = clock();
     map<int, double> userMean, userTendency;
     map<int, double> itemMean, itemTendency;
 
@@ -171,5 +194,6 @@ int main() {
 
     evaluate(userMean, userTendency, itemMean, itemTendency);
 
+    cout << "Time taken: " << (clock() - startt) / CLOCKS_PER_SEC << "s\n";
     return 0;
 }
